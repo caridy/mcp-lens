@@ -556,7 +556,7 @@ Important distinction: this is *not* the tool description (which is static, in t
 
 **If no preset tools are installed, the agent composes from scratch.** Presets are an optional determinism lever the server author controls — not a requirement.
 
-**Default in `mcp-lens`:** a minimal built-in preset store and registration helper (similar shape to `registerInMemoryMemorialize`). Server authors define presets inline and hand them over. If more sophisticated storage is needed, they swap in their own implementation.
+**Default in `mcp-lens`:** a minimal built-in preset store and registration helper. Server authors define presets inline and hand them over. If more sophisticated storage is needed, they swap in their own implementation.
 
 **Future: predefined preset repositories.** Shared npm packages like `mcp-lens-presets-commerce` or `mcp-lens-presets-crm` can ship curated preset libraries server authors install and pipe in. Post-POC direction — the primitive shape should already support it, but we don't ship any preset repos in v1.
 
@@ -604,7 +604,7 @@ Both are markdown documents the agent reads. Presets are skills at a smaller, mo
 - Call with `{ description: string }` → stores it against the authenticated user.
 - Call with no args → returns all memorialized descriptions for the authenticated user.
 
-**`mcp-lens` ships a default in-memory implementation** that server authors can opt into with one call (e.g., `registerInMemoryMemorialize(server)`). Suitable for POCs, demos, and single-session uses. Not durable across restarts.
+**`mcp-lens` ships a default in-memory implementation** that server authors can opt into with one call. Suitable for POCs, demos, and single-session uses. Not durable across restarts.
 
 **Real deployments replace it.** Each MCP server already knows who the user is; memorialization is server-scoped by design. Preferences on the shoe server don't leak to the orders server.
 

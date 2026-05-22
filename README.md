@@ -50,7 +50,7 @@ That alone gives you `show_lens` + three generic presets. To actually *see* a le
 
 A note on what to expect:
 
-- The agent doesn't always reach for `show_lens` on its own at first — especially on hosts where text answers are the default reflex. If the response comes back as plain prose, **ask explicitly**: *"Show that as a lens"* or *"Use show_lens to render this."* Once the agent has read the lens skill (auto-fetched as an MCP resource), it picks the pattern up across the rest of the conversation.
+- The agent doesn't always reach for `show_lens` on its own at first — especially on hosts where text answers are the default reflex. If the response comes back as plain prose, **ask explicitly**: *"Show that as a lens"* or *"Use show_lens when possible please!"* Once the agent has read the lens skill (auto-fetched as an MCP resource), it picks the pattern up across the rest of the conversation.
 - Mileage varies by host. Hosts that implement SEP-1865 render the widget natively; hosts that don't fall back to the inlined HTML iframe path. Either path produces a working widget today.
 
 ---

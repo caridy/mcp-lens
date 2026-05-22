@@ -316,8 +316,7 @@ export function createIncidentsServer(): McpServer {
   // ── MCP Lens wiring ─────────────────────────────────────────────────────
   //
   // Register show_lens (required), the preset surface, and the skill
-  // resource. NO registerInMemoryMemorialize — this server emphasises
-  // preset richness over the preference loop.
+  // resource.
 
   registerShowLens(server);
   registerPresets(server, INCIDENT_PRESETS);

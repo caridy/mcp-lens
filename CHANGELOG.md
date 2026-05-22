@@ -14,7 +14,6 @@ First public version of MCP Lens.
 
 - `LensSpec` v0.1: a small constrained vocabulary for agent-composed views — containers (`box`, `column`, `row`, `card`, `list`), content (`text`, `markdown`, `image`, `badge`, `separator`), interactive (`button`, `link`), and the `table` primitive for side-by-side structured comparisons.
 - `registerShowLens(server)` — installs the single generic tool that takes a lens spec and returns an MCP UI resource.
-- `registerInMemoryMemorialize(server)` — optional per-server, per-user preference store with an in-memory default.
 - `registerPresets(server, presets)` — exposes a server author's moment-shaped presets via `list_lens_presets` / `get_lens_preset`.
 - `registerLensSkillResource(server)` — exposes the lens-authoring skill at `skill://mcp-lens/show-lens`.
 - React renderer bundled as a single self-contained HTML, served as the MCP UI resource.

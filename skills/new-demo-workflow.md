@@ -82,8 +82,6 @@ registerPresets(server, <NAME>_PRESETS);
 registerLensSkillResource(server);
 ```
 
-Skip `registerInMemoryMemorialize` unless the user opted in.
-
 `SERVER_INSTRUCTIONS` is a short ~500-byte orientation paragraph. Do not embed the full lens skill — that ships as a resource.
 
 ### Step 4 — Author the presets
