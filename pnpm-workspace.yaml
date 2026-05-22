@@ -1,0 +1,5 @@
+packages:
+  - 'packages/mcp-lens'
+  - 'packages/mcp-lens-server'
+  - 'packages/mcp-presets'
+  - 'packages/demos/*'

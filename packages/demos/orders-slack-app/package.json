@@ -1,0 +1,16 @@
+{
+  "name": "orders-slack-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Slack app project (Slack CLI) wrapping orders-mcp via the mcp:connect scope. Manifest-only — the Slack CLI reads manifest.json and creates/installs the app for you.",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'orders-slack-app is manifest-only; nothing to build. Use `slack run` from this directory.'",
+    "typecheck": "echo 'orders-slack-app is manifest-only; nothing to typecheck.'",
+    "test": "echo 'orders-slack-app is manifest-only; nothing to test.'",
+    "clean": "echo 'orders-slack-app has no build artifacts.'"
+  },
+  "devDependencies": {
+    "@slack/cli-hooks": "^1.3.2"
+  }
+}

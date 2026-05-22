@@ -1,0 +1,65 @@
+{
+  "name": "@mcp-lens/sdk",
+  "version": "0.1.0",
+  "description": "MCP Lens SDK — agent-composed views for any MCP server. Drop in a single tool + skill and any MCP server gains rich presentation.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./spec": {
+      "types": "./dist/spec/index.d.ts",
+      "import": "./dist/spec/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "build:renderer": "vite build --config renderer/vite.config.ts",
+    "build:bundle-renderer": "node scripts/bundle-renderer.mjs",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "pnpm run build:renderer && pnpm run build:bundle-renderer && pnpm run build:ts",
+    "dev:renderer": "vite --config renderer/vite.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist renderer/dist src/renderer-bundle.ts tsconfig.tsbuildinfo"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-ui",
+    "chatgpt-apps",
+    "agent",
+    "llm",
+    "ui"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vite-plugin-singlefile": "^2.1.0",
+    "vitest": "^2.1.8"
+  }
+}

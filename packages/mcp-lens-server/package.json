@@ -1,0 +1,45 @@
+{
+  "name": "@mcp-lens/server",
+  "version": "0.1.0",
+  "description": "Standalone MCP Lens server. Run alongside any MCP server to give the agent the show_lens tool plus a domain-blind set of moment-shaped presets, so the agent can compose rich next-turn affordances on top of data the upstream server doesn't know about.",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mcp-lens-server": "./dist/stdio.js",
+    "mcp-lens-server-http": "./dist/http.js"
+  },
+  "files": [
+    "dist/index.*",
+    "dist/server.*",
+    "dist/presets.*",
+    "dist/stdio.*",
+    "dist/http.*",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "start": "pnpm run build && node dist/stdio.js",
+    "start:http": "pnpm run build && node dist/http.js",
+    "serve:http": "node dist/http.js",
+    "dev:http": "tsx --watch src/http.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@mcp-lens/sdk": "workspace:*",
+    "@mcp-lens/presets": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

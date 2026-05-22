@@ -1,0 +1,33 @@
+{
+  "name": "shoes-mcp",
+  "version": "0.1.0",
+  "description": "Demo MCP server — tennis shoe catalog, with MCP Lens installed for rich presentation.",
+  "type": "module",
+  "private": true,
+  "main": "./dist/index.js",
+  "bin": {
+    "shoes-mcp": "./dist/stdio.js",
+    "shoes-mcp-http": "./dist/http.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo 'no tests'",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "start": "pnpm run build && node dist/stdio.js",
+    "start:http": "pnpm run build && node dist/http.js",
+    "serve:http": "node dist/http.js",
+    "dev:http": "tsx --watch src/http.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@mcp-lens/sdk": "workspace:*",
+    "@mcp-lens/presets": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

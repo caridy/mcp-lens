@@ -1,0 +1,36 @@
+{
+  "_metadata": {
+    "major_version": 1,
+    "minor_version": 1
+  },
+  "display_information": {
+    "name": "Orders MCP",
+    "description": "Demo Slack app wrapping orders-mcp (an MCP Lens demo server) via the mcp:connect scope.",
+    "long_description": "Orders MCP is a development-only Slack app that connects Slack's Slackbot MCP client to the orders-mcp demo server in the mcp-lens repo. It exposes order-management tools (list_orders, get_order, cancel_order, update_shipping_address) plus the MCP Lens surface (show_lens, list_lens_presets, get_lens_preset). Phase 0 of Slackbot MCP is read-only, so cancel_order and update_shipping_address may be suppressed; the read tools and show_lens should be available."
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Orders MCP",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "mcp:connect",
+        "commands"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": true,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  },
+  "mcp_servers": {
+    "Orders": {
+      "url": "https://<your-ngrok-url>/mcp",
+      "auth_type": "no_auth"
+    }
+  }
+}

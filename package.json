@@ -1,0 +1,29 @@
+{
+  "name": "mcp-lens-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MCP Lens — agent-composed views for any MCP server",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' build",
+    "typecheck": "pnpm -r --filter './packages/**' typecheck",
+    "test": "pnpm -r --filter './packages/**' test",
+    "clean": "pnpm -r --filter './packages/**' clean",
+    "demo:shoes": "pnpm --filter shoes-mcp start",
+    "demo:orders": "pnpm --filter orders-mcp start",
+    "demo:recipes": "pnpm --filter recipes-mcp start",
+    "demo:incidents": "pnpm --filter incidents-mcp start",
+    "lens-server": "pnpm --filter mcp-lens-server start",
+    "lens-server:http": "pnpm --filter mcp-lens-server start:http",
+    "start:all": "pnpm build && pnpm run serve:all",
+    "serve:all": "pnpm -r --parallel --filter './packages/demos/*' --filter mcp-lens-server run serve:http"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
