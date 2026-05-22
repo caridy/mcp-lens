@@ -22,7 +22,7 @@ packages/
 ├── mcp-lens/                     # core library
 │   ├── src/
 │   │   ├── spec/                 # LensSpec types + zod schema
-│   │   ├── tools/                # show_lens, memorialize, presets
+│   │   ├── tools/                # show_lens, presets
 │   │   ├── skill.ts              # getLensSkill, registerLensSkillResource
 │   │   └── renderer-bundle.ts    # GENERATED — do not edit
 │   ├── renderer/                 # React widget

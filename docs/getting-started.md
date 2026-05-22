@@ -85,28 +85,12 @@ const server = new McpServer(
 
 ## 4. (Optional) Add memorialized preferences
 
-Durable per-server, per-user preferences. Ships with a non-durable in-memory default — fine for POCs and demos; for real use, supply your own store.
+The renderer always shows a single **star** (favorite) affordance below every lens. When the user clicks it, the widget emits a follow-up prompt asking the agent to remember the presentation. The SDK does not ship the memorialize tool — server authors define their own with whatever name and schema fits their identity model. The agent discovers it by reading tool descriptions; if it doesn't find one, it acknowledges the preference in conversation for the rest of the session.
 
-```ts
-import { registerInMemoryMemorialize } from '@mcp-lens/sdk';
+The full cookbook (description text, schema, identity hook, runnable code sketch) lives in the SDK README under "Authoring a memorialize tool":
 
-// in-memory default (demo only)
-registerInMemoryMemorialize(server);
-
-// or with a real backing store + real user id
-registerInMemoryMemorialize(server, {
-  store: {
-    async add(userId, description) {
-      await db.preferences.insert({ userId, description, at: new Date() });
-    },
-    async list(userId) {
-      const rows = await db.preferences.findByUser(userId);
-      return rows.map((r) => r.description);
-    },
-  },
-  getUserId: (extra) => (extra as any).authInfo?.userId ?? 'anonymous',
-});
-```
+- Cookbook: [`packages/mcp-lens/README.md`](../packages/mcp-lens/README.md#authoring-a-memorialize-tool)
+- Worked example: [`packages/demos/shoes-mcp/src/server.ts`](../packages/demos/shoes-mcp/src/server.ts) — search for `save_lens_preference`. It uses an `anonymous` user id for demo purposes; replace `getUserId` with a real auth lookup before shipping.
 
 ## 5. (Optional) Ship lens presets
 
@@ -153,7 +137,6 @@ Use this when the user is focused on one order.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   registerShowLens,
-  registerInMemoryMemorialize,
   registerPresets,
   registerLensSkillResource,
 } from '@mcp-lens/sdk';
@@ -166,11 +149,14 @@ const server = new McpServer(
 // Your existing tools
 // server.registerTool('get_order', { ... }, async () => { ... });
 
-// MCP Lens — four lines to get rich UI
+// MCP Lens — three lines to get rich UI
 registerShowLens(server);
-registerInMemoryMemorialize(server);
 registerPresets(server, [/* your presets */]);
 registerLensSkillResource(server);
+
+// Optional fourth piece: your own memorialize tool. Pick a name, define
+// the schema, wire to your auth + persistence. See the cookbook in
+// packages/mcp-lens/README.md and the worked example in shoes-mcp.
 ```
 
 ## Verifying
@@ -178,8 +164,8 @@ registerLensSkillResource(server);
 Connect an MCP client. You should see the following new tools in `tools/list`:
 
 - `show_lens` — always.
-- `memorialize_lens` — if you called `registerInMemoryMemorialize`.
 - `list_lens_presets` + `get_lens_preset` — if you called `registerPresets`.
+- Whatever you named your memorialize tool (e.g. `save_lens_preference`) — if you authored one.
 
 And in `resources/list`:
 
@@ -191,9 +177,9 @@ And in `resources/list`:
 Roughly:
 
 1. On connection, read the skill (`skill://mcp-lens/show-lens`) and the server instructions.
-2. On the first user turn, call `memorialize_lens` with no args to load preferences (if available).
+2. On the first user turn, if a memorialize-style tool is advertised on the server, call it with no args to load any saved preferences and use them to shape every lens for the rest of the session.
 3. When a user question would benefit from a visual answer, consult `list_lens_presets`, fetch relevant presets, compose a lens, and call `show_lens(spec, description)`.
-4. The host renders the lens inside an iframe, with thumbs-up / thumbs-down chrome.
-5. Button clicks emit follow-up prompts; thumbs-up emits a memorialize request — all mediated by the agent.
+4. The host renders the lens inside an iframe with a single **star** affordance below it (suppress with `chrome.suppressFeedback: true` on confirmations).
+5. Button clicks emit follow-up prompts; star clicks emit a memorialize request the agent routes to whichever memorialize-style tool the server advertises (or acknowledges in conversation if none exists).
 
 See [`spec.md`](./spec.md) for what a lens looks like.

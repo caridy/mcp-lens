@@ -24,7 +24,7 @@ The thesis: MCPUI's current shape (each tool ships its own widget) is too rigid 
 
 ## Repo layout (current)
 
-- `packages/mcp-lens` — **the library** (npm: `@mcp-lens/sdk`). The spec, the renderer, the tool factories (`registerShowLens`, `registerPresets`, `registerInMemoryMemorialize`, `registerLensSkillResource`), and the lens-authoring skill. This is what server authors install.
+- `packages/mcp-lens` — **the library** (npm: `@mcp-lens/sdk`). The spec, the renderer, the tool factories (`registerShowLens`, `registerPresets`, `registerLensSkillResource`), and the lens-authoring skill. This is what server authors install. The SDK does **not** ship a memorialize tool — server authors define their own; see the "Authoring a memorialize tool" cookbook in `packages/mcp-lens/README.md` and the worked example in `packages/demos/shoes-mcp/src/server.ts`.
 - `packages/mcp-presets` — companion package (npm: `@mcp-lens/presets`): a build-time loader that compiles `presets/<domain>/*.md` from the repo root into typed exports per domain. Demos import from `@mcp-lens/presets/<domain>`.
 - `packages/demos/shoes-mcp`, `orders-mcp`, `incidents-mcp` — **reference demos** showing how to integrate the library into a real MCP server. Each curates its own domain-specific moment-shaped presets.
 - `packages/demos/recipes-mcp` — a deliberately *Lens-unaware* MCP server. Plain MCP, no `@mcp-lens/sdk` dependency. Pair with `packages/mcp-lens-server` to validate "agent uses Lens against an unaware upstream."

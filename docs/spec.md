@@ -18,7 +18,7 @@ Every lens has three fields at the root:
 
 | Field | Type | Default | Notes |
 |-|-|-|-|
-| `suppressFeedback` | `boolean` | `false` | Hide the thumbs-up/down feedback affordance. Use sparingly — confirmations, destructive-action prompts. |
+| `suppressFeedback` | `boolean` | `false` | Hide the star (favorite) feedback affordance. Use sparingly — confirmations, destructive-action prompts. |
 
 ## Nodes
 

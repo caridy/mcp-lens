@@ -114,8 +114,8 @@ Open a new chat, enable the connector (toggle in the composer), and ask in plain
 | "Show me the Gel-Resolution 9." | Agent calls `get_shoe`, then `show_lens` with a single `card`. Inline widget renders with image + specs + a "See similar" button. |
 | "Compare the Gel-Resolution 9 and the Solution Speed FF 3." | The money shot. `table` node side-by-side with differences highlighted. |
 | *(click the "Compare with another" button)* | Agent receives a follow-up prompt as if you'd typed it, then composes a new lens. |
-| *(click thumbs-up on a lens)* | Agent calls `memorialize_lens` with the description, acknowledges in chat. |
-| "I don't want to see prices anymore." | Agent stores the preference; subsequent lenses omit price. Disconnect and reconnect the connector (preferences persist in-memory until the server restarts). |
+| *(click the star on a lens)* | Agent finds shoes-mcp's `save_lens_preference` tool by description and calls it with the lens description, then acknowledges in chat. On servers without a memorialize-style tool, the agent acknowledges in conversation only. |
+| "I don't want to see prices anymore." | Agent saves the preference via `save_lens_preference`; subsequent lenses omit price. Disconnect and reconnect the connector — preferences persist in-memory until the demo server restarts. |
 
 ### Orders demo
 
@@ -244,7 +244,7 @@ In Slackbot, toggle on the "Orders MCP" connector and ask:
 The Slackbot pilot is **read-only in Phase 0**. The orders-mcp tools advertise `readOnlyHint`/`destructiveHint` annotations honestly, so Slack's filter has the data it needs:
 
 - `list_orders`, `get_order`, `show_lens`, `list_lens_presets`, `get_lens_preset` should be available.
-- `cancel_order`, `update_shipping_address`, `memorialize_lens` are non-read; Slack will likely suppress them in Phase 0. The cancel-confirmation flow won't be reachable until "tool allowance" / write-tool support lands. Suppression here is *expected*, not a bug.
+- `cancel_order`, `update_shipping_address` are non-read; Slack will likely suppress them in Phase 0. The cancel-confirmation flow won't be reachable until "tool allowance" / write-tool support lands. Suppression here is *expected*, not a bug.
 
 ### Iframe rendering — open unknowns
 
@@ -278,7 +278,7 @@ You'll see, in order:
 - `app: zod validation passed — rendering root { rootType: "card" }` — the renderer is about to draw.
 
 If validation fails, the log includes the *full received spec* (before zod) and the zod issues — so you can compare what the agent sent vs. what the widget actually received and see exactly where data was lost.
-- **Memorialized preferences disappear.** The default store is in-memory (`registerInMemoryMemorialize`) and resets when the demo server restarts. This is expected; real deployments swap in a durable store (see [`getting-started.md`](./getting-started.md)).
+- **Memorialized preferences disappear.** The shoes-mcp demo's `save_lens_preference` tool is in-memory and resets when the demo server restarts. This is expected; real deployments wire their own memorialize tool to a durable store (see the cookbook in [`packages/mcp-lens/README.md`](../packages/mcp-lens/README.md#authoring-a-memorialize-tool)).
 - **Comparison table looks transposed from what you expect.** It is — MCP Lens's `table` puts `fields` as rows and `items` as columns. This is deliberate; see [`spec.md`](./spec.md) and [`decisions.md`](./decisions.md) for the reasoning.
 
 ## Observing the flow

@@ -368,7 +368,7 @@ Anchor on the list. **Every row has its own follow-ups.** This is the rule that'
 
 ### Moment: user asked you to do something irreversible
 
-Anchor on the consequences. Offer exactly two affordances — proceed or back out. Suppress feedback chrome (thumbs-up isn't meaningful here).
+Anchor on the consequences. Offer exactly two affordances — proceed or back out. Suppress feedback chrome (the star isn't meaningful here).
 
 ```json
 {

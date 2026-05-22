@@ -2,7 +2,7 @@
 
 How MCP Lens is put together. For the lens JSON shape itself, see [`spec.md`](./spec.md). For the rationale, see [`problem.md`](./problem.md).
 
-MCP Lens is a **library**: a server author imports it from `@mcp-lens/sdk`, wires three to four `registerXxx` calls into their existing MCP server, and ships their own moment-shaped presets. The library is the published unit; the demos in this repo are reference integrations.
+MCP Lens is a **library**: a server author imports it from `@mcp-lens/sdk`, wires three `registerXxx` calls into their existing MCP server, and ships their own moment-shaped presets (and, optionally, their own memorialize tool). The library is the published unit; the demos in this repo are reference integrations.
 
 ## Repo layout
 
@@ -14,15 +14,16 @@ mcp-lens/
     ├── mcp-lens/                   # the published library
     │   ├── src/
     │   │   ├── spec/               # types + zod schema — the contract
-    │   │   ├── tools/              # show_lens, memorialize, presets
+    │   │   ├── tools/              # show_lens, presets
     │   │   ├── skill.ts
     │   │   └── renderer-bundle.ts  # GENERATED: inline renderer HTML as a string
     │   ├── renderer/               # React widget (separate build)
     │   │   └── src/                # App + components + host bridge + styles
     │   └── skills/show-lens.md     # the agent-facing skill
     ├── mcp-lens-server/            # standalone reference server (recipes A/B demo only)
+    ├── mcp-presets/                # @mcp-lens/presets — preset commons compiled from presets/<domain>/*.md
     └── demos/
-        ├── shoes-mcp/              # shopping / comparison reference demo
+        ├── shoes-mcp/              # shopping / comparison reference demo (also ships save_lens_preference)
         ├── orders-mcp/             # transactional / confirmation reference demo
         ├── incidents-mcp/          # cross-domain reference demo (accounts + incidents)
         ├── recipes-mcp/            # deliberately Lens-unaware (paired with mcp-lens-server)
@@ -41,7 +42,7 @@ At runtime:
 - The `show_lens` tool response carries `_meta.ui.resourceUri` (canonical) **and** `_meta['openai/outputTemplate']` (legacy ChatGPT) pointing at that URI. Spec-compliant hosts (Claude Desktop, Slack's pilot MCP client, Postman, MCPJam) read the canonical key; ChatGPT Apps reads the legacy one. Dual-emit keeps both worlds working until ChatGPT migrates.
 - On the spec path, the renderer's `host.ts` instantiates an `App` from `@modelcontextprotocol/ext-apps`, runs the `ui/initialize` handshake, and listens for `ui/notifications/tool-result` to receive the lens spec. On the legacy path (ChatGPT), it reads `window.openai.toolOutput` and subscribes to `openai:set_globals` for live updates. A `__mcpLensDevOutput` window override exists for local Vite dev.
 - Nodes are dispatched by `RenderNode.tsx` based on `type`. Components are small and stateless.
-- Chrome (thumbs-up/down) sits outside the composed spec, always rendered unless `spec.chrome.suppressFeedback` is true.
+- Chrome (a single star/favorite affordance) sits outside the composed spec, always rendered unless `spec.chrome.suppressFeedback` is true.
 - A *one-time host fingerprint* is logged at module load (matched globals on `window` keyed off `/openai|slack|mcp|host|bridge|widget|claude/`) so bringing up a new host yields a single iframe-console line that names what bridge to wire up.
 
 **The renderer is intentionally not a layout engine.** The vocabulary is narrow: containers (`box`, `column`, `row`, `card`, `list`), content (`text`, `markdown`, `image`, `badge`, `separator`), two interactive nodes (`button` for conversational actions, `link` for external navigation), and one specialty node (`table`). This is closer to Slack Block Kit than to a web framework — on purpose.
@@ -79,29 +80,27 @@ Response:
 
 The input/output is deliberately asymmetric: input takes `{ spec, description }`; the output's `structuredContent` carries `{ spec }` only. The widget hydrates from the spec; the description is metadata for the *agent*, not the widget.
 
-`description` is **model-facing metadata** — an account of what the lens shows and what presentation choices were made. The host surfaces it back to the agent, which decides what to actually say to the user. It is also the payload stored if the user approves the lens via thumbs-up.
+`description` is **model-facing metadata** — an account of what the lens shows and what presentation choices were made. The host surfaces it back to the agent, which decides what to actually say to the user. It is also the payload the agent re-uses when the user stars the view (memorialization).
 
 No `outputSchema` is published. Publishing one causes ChatGPT Apps to enforce the resulting JSON Schema on the structuredContent it delivers to the widget, and the enforcement strips nested fields when the schema can't perfectly express recursive types (it never quite can, for arbitrary lens trees). See [`decisions.md`](./decisions.md) for the diagnostic story.
 
-### 3. Renderer chrome (thumbs up / down)
+### 3. Renderer chrome (the star)
 
-The renderer draws a small feedback toolbar below every lens (unless suppressed). Click → emits a follow-up prompt through `window.openai.sendFollowUpMessage({ prompt: ... })`.
+The renderer draws a single **star** (favorite) affordance below every lens, unless `spec.chrome.suppressFeedback` is true. There's no thumbs-down — feedback for "I don't like this view" is just the user typing in the next turn.
 
-- **Thumbs up** → emits a prompt telling the agent to (a) call `memorialize_lens` with the description if that tool is available, (b) acknowledge in conversation.
-- **Thumbs down** → emits a prompt asking the user what they'd prefer different, then compose a new lens.
+Click → emits a follow-up prompt asking the agent to memorialize the presentation. The widget never calls tools directly; every action is mediated by the agent. See the next section for what happens when the agent receives that prompt.
 
-The widget never calls tools directly. Every action — including memorialization — is mediated by the agent.
+### 4. Memorialization (server-defined, optional)
 
-### 4. `memorialize_lens` (optional)
+The SDK does not ship a memorialize tool. Server authors who want per-user durable preferences define their own MCP tool with whatever name and schema fits their identity model. The agent discovers it on `tools/list` by reading tool descriptions (the renderer's star prompt instructs the agent to look for tools whose descriptions mention saving/remembering presentation preferences).
 
-Per-server, per-user durable preference store. Registered by `registerInMemoryMemorialize(server, options)`. Two modes:
+If the agent finds such a tool, it calls it with the description it wrote when calling `show_lens`. If it doesn't, it acknowledges the preference in conversation for the rest of the session and stops — no fabricated tool calls.
 
-- `{ description: '...' }` — append a preference for the current user.
-- no args — return all preferences for the current user.
+This keeps the SDK out of the identity business. Server authors who already know who their users are (auth tokens, OAuth claims, OS user) wire memorialization the way that fits their stack; servers without identity (e.g. the standalone `npx`-launched `@mcp-lens/server`) simply skip it.
 
-The shipped `InMemoryMemorializeStore` is non-durable. Server authors swap in their own backing store and `getUserId` resolver.
+The cookbook for authoring such a tool — description text, schema shape, identity hook, runnable code sketch — lives in `packages/mcp-lens/README.md`. The worked example lives in `packages/demos/shoes-mcp/src/server.ts` (search for `save_lens_preference`).
 
-**Scope:** per-server, per-user. Preferences on the shoes server never leak to the orders server. This is deliberate — it's not a global memory competing with ChatGPT/Claude memory; it's a server-owned preference lane.
+**Scope (when authored):** per-server, per-user. Preferences on the shoes server don't leak to the orders server. This is deliberate — it's not a global memory competing with ChatGPT/Claude memory; it's a server-owned preference lane.
 
 ### 5. Lens presets (optional)
 
@@ -128,7 +127,7 @@ Presets are precedent, not templates. The skill explicitly tells the agent that 
 - The route-to-browse pattern for ambiguous picks (e.g. "Compare with another" routes to a list of candidates rather than fabricating one).
 - The inline-data principle.
 - The model-facing nature of the description.
-- The session-start `memorialize_lens()` call and the thumbs-up flow.
+- The session-start "look for a memorialize-style tool by description" pattern and the star-click flow.
 - The preset-consultation flow.
 
 `getLensSkill()` returns the markdown as a string (cached after first read). `registerLensSkillResource(server)` exposes it as an MCP resource at `skill://mcp-lens/show-lens`.
@@ -143,32 +142,34 @@ Two additional skills live at the repo root in `skills/` — these are **not** s
 ```ts
 import {
   registerShowLens,          // required
-  registerInMemoryMemorialize,  // optional
-  registerPresets,              // optional
-  registerLensSkillResource,    // optional
+  registerPresets,           // optional
+  registerLensSkillResource, // optional
   getLensSkill,
 } from '@mcp-lens/sdk';
 
-registerShowLens(server);                         // adds show_lens + renderer resource
-registerInMemoryMemorialize(server);              // adds memorialize_lens (in-memory)
+registerShowLens(server);                            // adds show_lens + renderer resource
 registerPresets(server, [shoePreset, orderPreset]);  // adds list/get preset tools
-registerLensSkillResource(server);                // adds the skill as an MCP resource
+registerLensSkillResource(server);                   // adds the skill as an MCP resource
+
+// Optional fourth piece: your own memorialize tool. Pick a name and schema,
+// wire it to your auth + persistence. See packages/mcp-lens/README.md
+// ("Authoring a memorialize tool") and packages/demos/shoes-mcp for a
+// runnable example.
 ```
 
 Everything past `registerShowLens` is opt-in.
 
 ## Flow: one lens, end to end
 
-1. **Session start.** Agent reads server instructions + the skill resource. If `memorialize_lens` is available, agent calls it with no args and ingests prior preferences.
+1. **Session start.** Agent reads server instructions + the skill resource. If a memorialize-style tool is advertised on the server (recognized by description, not name), agent calls it with no args and ingests prior preferences.
 2. **User turn.** User asks a question that would benefit from a visual answer.
 3. **(Optional) preset consultation.** Agent calls `list_lens_presets`, fetches relevant ones, uses as reference.
 4. **Compose.** Agent composes a lens spec from data it already has, writes a `description` for itself.
 5. **Call.** Agent calls `show_lens(spec, description)`. Server validates and returns a response with the renderer URI and structuredContent carrying the spec.
-6. **Render.** Host loads the renderer iframe; renderer reads `window.openai.toolOutput`, validates, and draws the lens + chrome.
+6. **Render.** Host loads the renderer iframe; renderer reads the bridge (spec or legacy), validates, and draws the lens + star.
 7. **Narrate.** Agent replies in conversation, using (but not duplicating) the view.
 8. **Feedback.**
-   - *Thumbs-up* → renderer sends follow-up prompt → agent calls `memorialize_lens(description)` → acknowledges.
-   - *Thumbs-down* → renderer sends follow-up prompt → agent asks what to change → composes a new lens.
+   - *Star click* → renderer sends follow-up prompt → agent finds a memorialize-style tool by description and calls it with the description (or acknowledges in conversation if none exists).
    - *Button click* → renderer sends the button's `prompt` → agent interprets it as the user's next turn.
 
 ## Target hosts
@@ -192,7 +193,7 @@ Adapting to additional hosts (Postman, MCPJam, future entrants) should be near-z
 
 - Multiple renderers (Lit, Slack Block Kit, native iOS/Android). The spec is designed so this is possible later; v1 ships one.
 - Third-party preset-library npm packages (`@acme/mcp-lens-presets`, etc.) following the `@mcp-lens/presets` shape. Mechanism is in place; we don't ship any yet beyond the reference one.
-- Persistent memorialize store implementations. The in-memory default and a swappable interface are shipped; real stores are server-author-specific.
+- A built-in memorialize tool. The SDK no longer ships one; server authors define their own (with whatever name, schema, and persistence fits their identity model). See `packages/mcp-lens/README.md` for the cookbook.
 - Durable session state. The renderer is stateless per tool call.
 - Mobile rendering parity. HTML iframes are the platform; native rendering on iOS/Android is a separate translation layer (Block Kit on Slack, equivalents elsewhere).
 

@@ -19,7 +19,7 @@ Things not yet decided. When one gets resolved, move it to `decisions.md` (or re
 
 ## Standalone Lens server (mcp-lens-server)
 
-- **Auth/identity tier for memorialize.** The standalone server intentionally omits `memorialize_lens` until it has a way to identify the user (hand-issued bearer tokens for hosted, OS-user for self-hosted, etc.). Decision deferred until we know whether anyone actually wants per-user persistence on a server with no domain data of its own. The library's memorialize support continues to work for integrated servers (shoes/orders) where the author wires their own identity.
+- **Auth/identity tier for memorialize.** Resolved by the 2026-05-21 reframe — the SDK no longer ships memorialize at all, so the standalone server simply doesn't author one. Server authors pair it with whatever upstream they want; if that upstream advertises a memorialize-style tool, the agent finds it and uses it. If the standalone server itself ever needs an own-identity story (hosted variant, hand-issued tokens), that's its own decision; it isn't gating anything today.
 - **Custom-preset extension story.** Currently the standalone server ships exactly three presets and that's it. With `mcp-presets` now the canonical commons, a flag like `--presets <package-name>` to swap in a different preset library would let power users extend without forking. Easy to add when needed.
 - **Hosted version (vs. self-hosted via `npx`).** Phase 1 ships self-hosted only. Hosted has real privacy implications (the agent inlines upstream-server data into spec arguments that pass through our service) that need a deliberate writeup before launch. Parked.
 

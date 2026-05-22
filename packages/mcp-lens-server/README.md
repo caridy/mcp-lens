@@ -35,7 +35,7 @@ npx -y @mcp-lens/server-http   # listens on :3010 by default; override with PORT
 
 What it does **not** ship:
 
-- `memorialize_lens` — the standalone server has no identity story (no auth tier on `npx`-launched stdio).
+- A memorialize tool. The SDK never ships one (server authors define their own); this standalone server has no identity story to wire one to. When paired with an upstream that *does* advertise a memorialize-style tool, the agent will find it by description and use it. When paired with an upstream that doesn't, the renderer's star prompt degrades gracefully — the agent acknowledges the preference in conversation for the rest of the session.
 - Domain-specific presets — bring your own (or fork this and add them).
 
 ## When to use this vs. integrating directly
