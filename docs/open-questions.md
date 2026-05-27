@@ -49,7 +49,3 @@ Things not yet decided. When one gets resolved, move it to `decisions.md` (or re
 ## Inline `confirm` on buttons (from SlackAIKit comparison)
 
 - **`ButtonNode.confirm?: { title, body, ok, cancel, variant, tone }`?** SlackAIKit's `actions` component bakes confirmation into the button itself. We currently require the agent to compose a full confirmation lens (the `user-asked-to-cancel-an-order` preset). That's flexible (the confirmation lens can show line items, totals, consequences) but verbose for *simple* yes/no confirmations. An optional `confirm` field on `ButtonNode` would ship the simple case as a one-click pattern while leaving the full-lens approach available for the complex case. Non-breaking, additive. Hold until a real moment demonstrates the friction — most current demos benefit from the full-lens shape (cancel-order shows the order; pick-the-vaporfly shows the comparison).
-
-## NPM publish
-
-- **Names claimed under the `@mcp-lens` org.** Three packages will publish: `@mcp-lens/sdk` (the library), `@mcp-lens/server` (standalone reference server), `@mcp-lens/presets` (preset commons). Org claimed; first real publish pending owner availability + an actual decision on whether to publish at v0.1.0 or push the bar to v0.2.x first.

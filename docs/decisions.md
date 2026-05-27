@@ -6,6 +6,16 @@ Format: `## YYYY-MM-DD — Title`, then **Decision**, **Reasoning**, optional **
 
 ---
 
+## 2026-05-27 — Published packages must not leak `workspace:*` metadata
+
+**Decision:** Published package manifests use registry-resolvable semver for cross-package dependencies. All three public packages were bumped to `0.1.1` so the first post-publish patch set can be installed as a coherent version. `@mcp-lens/server@0.1.1` depends on `@mcp-lens/sdk@^0.1.1` and `@mcp-lens/presets@^0.1.1`; it also exposes a `server` bin pointing at the stdio entrypoint so `npx -y @mcp-lens/server` works without `--package`. `@mcp-lens/presets@0.1.1` declares `@mcp-lens/sdk@^0.1.1` in peer/dev metadata. The repo keeps local development links by setting `link-workspace-packages=true` and `prefer-workspace-packages=true` in the root `.npmrc`.
+
+**Reasoning:** The first npm publish left `workspace:*` in the public `@mcp-lens/server` manifest. `npx --package @mcp-lens/server mcp-lens-server` then failed during install with `EUNSUPPORTEDPROTOCOL: Unsupported URL Type "workspace:"`. npm registry consumers cannot resolve pnpm workspace protocol; publishable package metadata has to be valid from outside the monorepo. Because npm package versions are immutable, fixing the public install requires publishing new patch versions rather than replacing `0.1.0`.
+
+**Concrete follow-up:** Publish `@mcp-lens/sdk@0.1.1` first, then `@mcp-lens/presets@0.1.1`, then `@mcp-lens/server@0.1.1`.
+
+**Verification:** Packed both packages with npm using an isolated cache and inspected the tarball `package/package.json` files. Neither tarball contains `workspace:*`; the server tarball exposes the default `server` bin plus the explicit `mcp-lens-server` and `mcp-lens-server-http` bins.
+
 ## 2026-05-21 — SDK no longer ships memorialize; chrome is single-star; thumbs-down dropped
 
 **Decision:** Three changes to the feedback loop, all coupled:

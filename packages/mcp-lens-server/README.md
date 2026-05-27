@@ -19,12 +19,14 @@ In Claude Desktop, ChatGPT Apps, or any other MCP host that accepts a stdio conn
 }
 ```
 
+That runs the stdio server by default. The package also exposes explicit `mcp-lens-server` and `mcp-lens-server-http` binaries.
+
 Then register your *real* MCP server (recipes, tickets, whatever) alongside it. The agent gets `show_lens` from `lens` and the domain tools from the other connector. It composes lenses against the upstream's data using the three generic presets shipped here.
 
 For HTTP transport (ChatGPT Apps via tunnel, Slack pilot, etc.):
 
 ```bash
-npx -y @mcp-lens/server-http   # listens on :3010 by default; override with PORT
+npx -y --package @mcp-lens/server mcp-lens-server-http   # listens on :3010 by default; override with PORT
 ```
 
 ## What it ships
