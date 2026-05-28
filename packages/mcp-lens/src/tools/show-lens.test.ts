@@ -168,8 +168,8 @@ describe('registerShowLens', () => {
     expect(text).toMatch(/Minimal valid lens/);
     expect(text).toMatch(/"specVersion": "0\.1"/);
 
-    // Pointer to the skill for deeper reference.
-    expect(text).toMatch(/skill:\/\/mcp-lens\/show-lens/);
+    // Pointer to get_lens_guide for deeper reference.
+    expect(text).toMatch(/get_lens_guide/);
 
     // No widget payload leaks through on error — neither canonical nor
     // legacy keys, no structuredContent.
@@ -280,9 +280,10 @@ describe('registerShowLens', () => {
     expect(text).toMatch(/Rename to `table`/);
   });
 
-  it('detects a bare node at the root and explains the wrapper', async () => {
+  it('coerces a bare node at the root into a valid lens (auto-wraps)', async () => {
     const { client } = await setupServer();
     // Agent passed a node where a lens-with-specVersion-and-root was expected.
+    // Coercion wraps it in { specVersion, root: <node> } and it succeeds.
     const result = await client.callTool({
       name: 'show_lens',
       arguments: {
@@ -290,11 +291,10 @@ describe('registerShowLens', () => {
         description: 'bare node at root',
       },
     });
-    expect(result.isError).toBe(true);
-    const text = errorText(result);
-    expect(text).toMatch(/Root must be/);
-    expect(text).toMatch(/"specVersion": "0\.1"/);
-    expect(text).toMatch(/Wrap it/i);
+    expect(result.isError).not.toBe(true);
+    const sc = result.structuredContent as { spec?: { specVersion?: string; root?: unknown } };
+    expect(sc?.spec?.specVersion).toBe('0.1');
+    expect(sc?.spec?.root).toEqual({ type: 'text', text: 'Hello' });
   });
 
   it('catches unknown node types deep in the tree with valid-type list', async () => {
@@ -328,7 +328,7 @@ describe('registerShowLens', () => {
     expect(text).toMatch(/card/);
   });
 
-  it('mentions `get_lens_preset` as a recovery aid', async () => {
+  it('mentions `get_lens_guide` and `get_lens_preset` as recovery aids', async () => {
     const { client } = await setupServer();
     const result = await client.callTool({
       name: 'show_lens',
@@ -339,7 +339,7 @@ describe('registerShowLens', () => {
     });
     expect(result.isError).toBe(true);
     const text = errorText(result);
-    expect(text).toMatch(/list_lens_presets/);
+    expect(text).toMatch(/get_lens_guide/);
     expect(text).toMatch(/get_lens_preset/);
   });
 
@@ -368,5 +368,56 @@ describe('registerShowLens', () => {
     const tools = await client.listTools();
     expect(tools.tools.map((t) => t.name)).toContain('render_view');
     expect(tools.tools.map((t) => t.name)).not.toContain('show_lens');
+  });
+
+  // ── Coercion tests ──────────────────────────────────────────────────────
+
+  it('coerces a JSON string spec into an object', async () => {
+    const { client } = await setupServer();
+    const spec = { specVersion: LENS_SPEC_VERSION, root: { type: 'text', text: 'hi' } };
+    const result = await client.callTool({
+      name: 'show_lens',
+      arguments: { spec: JSON.stringify(spec), description: 'stringified' },
+    });
+    expect(result.isError).not.toBe(true);
+    const sc = result.structuredContent as { spec: typeof spec };
+    expect(sc.spec).toEqual(spec);
+  });
+
+  it('unwraps a double-wrapped { spec: { specVersion, root } } envelope', async () => {
+    const { client } = await setupServer();
+    const inner = { specVersion: LENS_SPEC_VERSION, root: { type: 'text', text: 'hi' } };
+    const result = await client.callTool({
+      name: 'show_lens',
+      arguments: { spec: { spec: inner }, description: 'wrapped' },
+    });
+    expect(result.isError).not.toBe(true);
+    const sc = result.structuredContent as { spec: typeof inner };
+    expect(sc.spec).toEqual(inner);
+  });
+
+  it('injects missing specVersion when root is present', async () => {
+    const { client } = await setupServer();
+    const result = await client.callTool({
+      name: 'show_lens',
+      arguments: { spec: { root: { type: 'text', text: 'hi' } }, description: 'no version' },
+    });
+    expect(result.isError).not.toBe(true);
+    const sc = result.structuredContent as { spec: { specVersion: string } };
+    expect(sc.spec.specVersion).toBe('0.1');
+  });
+
+  it('coerces a JSON string containing a bare node', async () => {
+    const { client } = await setupServer();
+    const result = await client.callTool({
+      name: 'show_lens',
+      arguments: {
+        spec: '{"type":"text","text":"hello"}',
+        description: 'string bare node',
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    const sc = result.structuredContent as { spec: { root: { type: string } } };
+    expect(sc.spec.root).toEqual({ type: 'text', text: 'hello' });
   });
 });

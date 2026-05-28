@@ -1,26 +1,18 @@
 /**
  * MCP Lens SDK — public API.
  *
- * Minimal install (one required call):
+ * Single-call registration:
  *
  *   import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
  *   import { registerShowLens } from '@mcp-lens/sdk';
  *
  *   const server = new McpServer({ name: 'my-server', version: '0.1.0' });
- *   registerShowLens(server);
+ *   registerShowLens(server, { presets: MY_PRESETS });
  *
- * Full install (all optional helpers):
- *
- *   import {
- *     registerShowLens,
- *     registerPresets,
- *     registerLensSkillResource,
- *     getLensSkill,
- *   } from '@mcp-lens/sdk';
- *
- *   registerShowLens(server);
- *   registerPresets(server, [shoePreset, orderPreset]);
- *   registerLensSkillResource(server);
+ * This registers three tools:
+ *   - show_lens           — compose and render a lens
+ *   - get_lens_guide      — spec reference + user preferences + preset index
+ *   - get_lens_preset     — fetch one preset's full body (only if presets provided)
  */
 
 // ── Tools ───────────────────────────────────────────────────────────────────
@@ -30,23 +22,23 @@ export {
   LENS_RENDERER_URI,
   LENS_RENDERER_MIME,
   type RegisterShowLensOptions,
+  type ShowLensCallEvent,
 } from './tools/show-lens.js';
 
 export {
-  registerPresets,
-  InMemoryPresetStore,
   type LensPreset,
   type PresetStore,
-  type RegisterPresetsOptions,
+  InMemoryPresetStore,
 } from './tools/presets.js';
 
 // ── Skill ───────────────────────────────────────────────────────────────────
 
-export {
-  getLensSkill,
-  registerLensSkillResource,
-  LENS_SKILL_URI,
-} from './skill.js';
+export { getLensSkill } from './skill.js';
+
+// ── Legacy (deprecated — use registerShowLens with options.presets) ──────────
+
+export { registerPresets, type RegisterPresetsOptions } from './tools/presets.js';
+export { registerLensSkillResource, LENS_SKILL_URI } from './skill.js';
 
 // ── Spec ────────────────────────────────────────────────────────────────────
 

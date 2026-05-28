@@ -74,15 +74,13 @@ Each tool gets:
 - `annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false }`.
 - A handler that returns `content` + `structuredContent`.
 
-After the tool block, wire MCP Lens:
+After the tool block, wire MCP Lens (one call registers all three lens tools):
 
 ```ts
-registerShowLens(server);
-registerPresets(server, <NAME>_PRESETS);
-registerLensSkillResource(server);
+registerShowLens(server, { presets: <NAME>_PRESETS });
 ```
 
-`SERVER_INSTRUCTIONS` is a short ~500-byte orientation paragraph. Do not embed the full lens skill — that ships as a resource.
+`SERVER_INSTRUCTIONS` is a short ~500-byte orientation paragraph. List the tools (`get_lens_guide`, `get_lens_preset`, `show_lens`) and state the workflow: `get_lens_guide → get_lens_preset → show_lens`.
 
 ### Step 4 — Author the presets
 
@@ -112,7 +110,7 @@ Ship presets in this order in the file (matches user mental model):
 - Uses `InMemoryTransport.createLinkedPair()` to wire a server + client in-process.
 - Lists tools and confirms every expected tool name is present.
 - Calls each domain tool with a representative argument, prints a one-line summary of the result.
-- Calls `list_lens_presets` and prints the preset names.
+- Calls `get_lens_guide` and verifies the preset index is present.
 - Calls `show_lens` with a representative spec — ideally exercising the cross-domain combination if the demo has one. Confirm both the canonical `_meta.ui.resourceUri` and legacy `openai/widgetDescription` are present in the result.
 
 The smoketest is the floor for "did I wire this up correctly." It catches schema mismatches, missing imports, typoed tool names. It does NOT catch "this preset is too rigid" — that's Step 8.

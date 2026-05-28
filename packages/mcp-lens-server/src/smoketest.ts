@@ -26,9 +26,9 @@ async function main() {
   for (const r of resources.resources)
     console.log(`  ${r.uri}: ${r.description ?? ''}`);
 
-  console.log('\n─── list_lens_presets ───');
+  console.log('\n─── get_lens_guide ───');
   const presetList = await client.callTool({
-    name: 'list_lens_presets',
+    name: 'get_lens_guide',
     arguments: {},
   });
   console.log((presetList.content as Array<{ text: string }>)[0]?.text);

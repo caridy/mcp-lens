@@ -6,6 +6,25 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ## [Unreleased]
 
+### v0.1.2 — consolidated registration, skill via tool
+
+**Breaking (registration API):**
+
+- `registerShowLens(server, { presets })` is now the single entry point. Presets are passed as an option rather than via a separate `registerPresets` call. `registerPresets` and `registerLensSkillResource` still exist but are deprecated.
+
+**Tools:**
+
+- Consolidated to three tools: `show_lens`, `get_lens_guide`, `get_lens_preset`.
+- `list_lens_presets` removed — the preset index (name + description for each preset) is now part of the `get_lens_guide` response.
+- `get_lens_guide` replaces the `skill://mcp-lens/show-lens` MCP resource. Returns: spec reference + user preferences (if configured) + preset index. The agent's flow is now `get_lens_guide` → `get_lens_preset(name)` → `show_lens(spec, description)`.
+
+**Enhancements:**
+
+- Spec coercion: `show_lens` now applies lightweight coercion to common spec shape mistakes before validation, reducing agent retry loops.
+- Debug logging: tools emit structured debug logs (tool name, timing, validation outcome) when `MCP_LENS_DEBUG=1` is set.
+
+---
+
 ### v0.1.0 — initial public release
 
 First public version of MCP Lens.

@@ -97,14 +97,14 @@ async function main() {
     console.log(`    ${c.name} [${c.roles.join(', ')}] ${c.eventCount} updates`);
   }
 
-  console.log('\n─── list_lens_presets ───');
-  const presets = await client.callTool({
-    name: 'list_lens_presets',
+  console.log('\n─── get_lens_guide ───');
+  const guide = await client.callTool({
+    name: 'get_lens_guide',
     arguments: {},
   });
-  const pl = presets.structuredContent as { presets: { name: string }[] };
-  console.log(`  ${pl.presets.length} presets`);
-  for (const p of pl.presets) console.log(`    ${p.name}`);
+  const guideText = (guide.content as Array<{ text: string }>)[0]?.text ?? '';
+  console.log(`  guide length: ${guideText.length} chars`);
+  console.log(`  has preset index: ${guideText.includes('Available presets')}`);
 
   console.log('\n─── show_lens (combined account header + incidents list) ───');
   const lens = await client.callTool({

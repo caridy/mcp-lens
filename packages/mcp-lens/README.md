@@ -28,19 +28,16 @@ registerShowLens(server);
 
 ## Full install
 
-All three components, each opt-in except `registerShowLens`.
+One call registers all three tools (`show_lens`, `get_lens_guide`, `get_lens_preset`):
 
 ```ts
-import {
-  registerShowLens,          // required — the show_lens tool + renderer
-  registerPresets,           // optional — server-authored presentation precedents
-  registerLensSkillResource, // optional — expose the skill as an MCP resource
-  getLensSkill,              // the skill as a markdown string
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 
-registerShowLens(server);
-registerPresets(server, [myShoePreset, myOrderPreset]);
-registerLensSkillResource(server);
+registerShowLens(server, {
+  presets: [myShoePreset, myOrderPreset],       // optional — moment-shaped precedents
+  getPreferences: async (extra) => { ... },     // optional — per-user memorialized prefs
+  onCall: (event) => console.log(event),        // optional — debug callback
+});
 ```
 
 ## Concepts
@@ -131,24 +128,11 @@ Short markdown documents the server author ships as presentation precedent (e.g.
 
 **Organize presets by conversational moment, not data shape.** Names like `user-asked-about-a-shoe` or `user-is-browsing-orders` describe what the user is *doing*. Each preset names both the right anchor (data) and the right next-turn affordances (buttons / links) for that moment. Same data → different lenses, depending on the moment.
 
-Two tools register together:
+Pass presets via `registerShowLens(server, { presets: [...] })`. The SDK registers `get_lens_preset(name)` and includes a preset index in `get_lens_guide` output.
 
-- `list_lens_presets()` — names + one-line descriptions.
-- `get_lens_preset(name)` — full body.
+### The guide tool (`get_lens_guide`)
 
-```ts
-registerPresets(server, [
-  {
-    name: 'user-asked-about-a-shoe',
-    description: 'Use when the user named one shoe and is likely to compare or see similar.',
-    body: '# Moment: user asked about one shoe\n\nAnchor on the shoe; offer 2-3 follow-ups...\n\n```json\n{ ... }\n```',
-  },
-]);
-```
-
-### The skill
-
-A markdown document that teaches the agent how to use MCP Lens. Read by the agent before composing any lens. Ships as a file in the package; expose to the agent via `registerLensSkillResource(server)` (for clients that auto-surface MCP resources) or by embedding `getLensSkill()` in your server instructions.
+The agent's session bootstrap. Returns the condensed spec reference (node vocabulary, composition rules), user preferences (if `getPreferences` is configured), and the preset index. The `show_lens` tool description tells the agent to call `get_lens_guide` before composing its first lens. After context compaction, the agent can re-call it to reload knowledge.
 
 ## Contract
 

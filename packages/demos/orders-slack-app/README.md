@@ -74,7 +74,7 @@ Slackbot's pilot is **read-only in Phase 0**. The orders-mcp server registers to
 | `cancel_order` | false (`destructiveHint: true`) | **Likely suppressed in Phase 0.** The cancel-confirmation flow won't be reachable until Slack's "tool allowance" / write-tool support ships in a later phase. |
 | `update_shipping_address` | false | Likely suppressed in Phase 0. |
 | `show_lens` | true | Should be available — composes a UI resource, no side effects. |
-| `list_lens_presets`, `get_lens_preset` | true | Should be available. |
+| `get_lens_guide`, `get_lens_preset` | true | Should be available. |
 
 Suppression of write tools is the *expected* Phase 0 behavior, not a bug. Re-test once Slack rolls out tool allowance.
 

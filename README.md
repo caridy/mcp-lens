@@ -97,16 +97,14 @@ Two integration paths.
 
 **Path A — drop in as a sibling connector.** No code change to your existing MCP server. The user wires `@mcp-lens/server` and your server side by side; the agent composes lenses against your server's data using the generic presets. Best when you don't own the upstream or want a zero-touch demo.
 
-**Path B — integrate `@mcp-lens/sdk` directly.** Three lines of TypeScript and your server gains `show_lens`, the renderer resource, and the lens skill. Add your own moment-shaped presets to teach the agent how *your* domain renders. Best when you want domain-specific affordances and lifecycle-aware behavior.
+**Path B — integrate `@mcp-lens/sdk` directly.** One call registers three tools (`show_lens`, `get_lens_guide`, `get_lens_preset`). Add your own moment-shaped presets to teach the agent how *your* domain renders. Best when you want domain-specific affordances and lifecycle-aware behavior.
 
 ```ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { registerShowLens, registerPresets, registerLensSkillResource } from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 
 const server = new McpServer({ name: 'my-server', version: '0.1.0' });
-registerShowLens(server);
-registerPresets(server, MY_PRESETS);
-registerLensSkillResource(server);
+registerShowLens(server, { presets: MY_PRESETS });
 ```
 
 Full integration walkthrough: [`docs/getting-started.md`](./docs/getting-started.md).

@@ -53,23 +53,11 @@ registerShowLens(server);
 
 That's it — the agent can now compose lenses and call `show_lens` with them. The renderer is served inline as an MCP UI resource.
 
-## 3. Add the skill
+## 3. The skill — automatic via `get_lens_guide`
 
-The agent needs to learn how to use MCP Lens. Two options:
+The agent needs to learn how to use MCP Lens. As of 0.1.2, this is automatic: `registerShowLens` installs a `get_lens_guide` tool that returns the spec reference, user preferences (if configured), and the preset index in a single call. No separate resource registration needed.
 
-### Option A — expose it as a resource (easiest)
-
-Some MCP clients (including many configurations of ChatGPT Apps) surface resources to the agent automatically.
-
-```ts
-import { registerLensSkillResource } from '@mcp-lens/sdk';
-
-registerLensSkillResource(server);
-```
-
-### Option B — embed it in your server instructions
-
-If you want to guarantee the agent reads it, put it in the server's `instructions`:
+If you want to *additionally* embed the skill in the server's `instructions` (belt-and-suspenders for hosts that don't surface tools proactively):
 
 ```ts
 import { getLensSkill } from '@mcp-lens/sdk';
@@ -96,14 +84,17 @@ The full cookbook (description text, schema, identity hook, runnable code sketch
 
 A preset is a short markdown document that teaches the agent how *your* server thinks a particular kind of data should be presented. It's precedent, not a template — the agent adapts real data rather than filling in placeholders.
 
-```ts
-import { registerPresets } from '@mcp-lens/sdk';
+Pass presets as an option to `registerShowLens`:
 
-registerPresets(server, [
-  {
-    name: 'order-summary',
-    description: 'How to show a single order with status and actions.',
-    body: `
+```ts
+import { registerShowLens } from '@mcp-lens/sdk';
+
+registerShowLens(server, {
+  presets: [
+    {
+      name: 'order-summary',
+      description: 'How to show a single order with status and actions.',
+      body: `
 # Order summary preset
 
 Use this when the user is focused on one order.
@@ -127,19 +118,16 @@ Use this when the user is focused on one order.
 }
 \`\`\`
 `.trim(),
-  },
-]);
+    },
+  ],
+});
 ```
 
 ## 6. Full example
 
 ```ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  registerShowLens,
-  registerPresets,
-  registerLensSkillResource,
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 
 const server = new McpServer(
   { name: 'my-server', version: '0.1.0' },
@@ -149,12 +137,10 @@ const server = new McpServer(
 // Your existing tools
 // server.registerTool('get_order', { ... }, async () => { ... });
 
-// MCP Lens — three lines to get rich UI
-registerShowLens(server);
-registerPresets(server, [/* your presets */]);
-registerLensSkillResource(server);
+// MCP Lens — one call to get rich UI
+registerShowLens(server, { presets: [/* your presets */] });
 
-// Optional fourth piece: your own memorialize tool. Pick a name, define
+// Optional second piece: your own memorialize tool. Pick a name, define
 // the schema, wire to your auth + persistence. See the cookbook in
 // packages/mcp-lens/README.md and the worked example in shoes-mcp.
 ```
@@ -164,21 +150,21 @@ registerLensSkillResource(server);
 Connect an MCP client. You should see the following new tools in `tools/list`:
 
 - `show_lens` — always.
-- `list_lens_presets` + `get_lens_preset` — if you called `registerPresets`.
+- `get_lens_guide` — always (returns spec reference + preferences + preset index).
+- `get_lens_preset` — if you passed presets to `registerShowLens`.
 - Whatever you named your memorialize tool (e.g. `save_lens_preference`) — if you authored one.
 
 And in `resources/list`:
 
 - `ui://mcp-lens/renderer.html` — the rendered widget.
-- `skill://mcp-lens/show-lens` — if you called `registerLensSkillResource`.
 
 ## What the agent will do
 
 Roughly:
 
-1. On connection, read the skill (`skill://mcp-lens/show-lens`) and the server instructions.
+1. On connection, call `get_lens_guide` to receive the spec reference, user preferences, and the preset index. Read server instructions.
 2. On the first user turn, if a memorialize-style tool is advertised on the server, call it with no args to load any saved preferences and use them to shape every lens for the rest of the session.
-3. When a user question would benefit from a visual answer, consult `list_lens_presets`, fetch relevant presets, compose a lens, and call `show_lens(spec, description)`.
+3. When a user question would benefit from a visual answer, call `get_lens_preset(name)` for relevant presets, compose a lens, and call `show_lens(spec, description)`.
 4. The host renders the lens inside an iframe with a single **star** affordance below it (suppress with `chrome.suppressFeedback: true` on confirmations).
 5. Button clicks emit follow-up prompts; star clicks emit a memorialize request the agent routes to whichever memorialize-style tool the server advertises (or acknowledges in conversation if none exists).
 

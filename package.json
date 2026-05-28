@@ -16,10 +16,10 @@
     "demo:orders": "pnpm --filter orders-mcp start",
     "demo:recipes": "pnpm --filter recipes-mcp start",
     "demo:incidents": "pnpm --filter incidents-mcp start",
-    "lens-server": "pnpm --filter mcp-lens-server start",
-    "lens-server:http": "pnpm --filter mcp-lens-server start:http",
+    "lens-server": "pnpm --filter @mcp-lens/server start",
+    "lens-server:http": "pnpm --filter @mcp-lens/server start:http",
     "start:all": "pnpm build && pnpm run serve:all",
-    "serve:all": "pnpm -r --parallel --filter './packages/demos/*' --filter mcp-lens-server run serve:http"
+    "serve:all": "pnpm -r --parallel --filter './packages/demos/*' --filter @mcp-lens/server run serve:http"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

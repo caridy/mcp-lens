@@ -2,7 +2,7 @@
 
 How MCP Lens is put together. For the lens JSON shape itself, see [`spec.md`](./spec.md). For the rationale, see [`problem.md`](./problem.md).
 
-MCP Lens is a **library**: a server author imports it from `@mcp-lens/sdk`, wires three `registerXxx` calls into their existing MCP server, and ships their own moment-shaped presets (and, optionally, their own memorialize tool). The library is the published unit; the demos in this repo are reference integrations.
+MCP Lens is a **library**: a server author imports it from `@mcp-lens/sdk`, calls `registerShowLens(server, { presets })` to wire everything into their existing MCP server, and ships their own moment-shaped presets (and, optionally, their own memorialize tool). The library is the published unit; the demos in this repo are reference integrations.
 
 ## Repo layout
 
@@ -104,10 +104,10 @@ The cookbook for authoring such a tool — description text, schema shape, ident
 
 ### 5. Lens presets (optional)
 
-Short markdown documents the server author ships as presentation precedent. `registerPresets(server, presets)` installs two tools:
+Short markdown documents the server author ships as presentation precedent. Presets are passed as an option to `registerShowLens(server, { presets })`, which advertises them through the `get_lens_guide` tool:
 
-- `list_lens_presets()` — `{ name, description }[]`.
-- `get_lens_preset(name)` — the full markdown body.
+- `get_lens_guide()` — returns the spec reference, user preferences (if configured), and a preset index (name + description for each preset).
+- `get_lens_preset(name)` — the full markdown body of a specific preset.
 
 A preset body is prose + embedded JSON code blocks. The prose explains intent, labels which parts of any embedded JSON are **prescriptive** (structure) vs. **illustrative** (sample values). No placeholder syntax (`{{name}}`); the prose does the work. The agent reads the markdown, adapts real data, and may combine multiple presets in one lens.
 
@@ -130,7 +130,7 @@ Presets are precedent, not templates. The skill explicitly tells the agent that 
 - The session-start "look for a memorialize-style tool by description" pattern and the star-click flow.
 - The preset-consultation flow.
 
-`getLensSkill()` returns the markdown as a string (cached after first read). `registerLensSkillResource(server)` exposes it as an MCP resource at `skill://mcp-lens/show-lens`.
+`getLensSkill()` returns the markdown as a string (cached after first read). The skill is delivered to the agent via the `get_lens_guide` tool (which bundles the spec reference, user preferences, and preset index in a single call) rather than as a standalone MCP resource.
 
 Two additional skills live at the repo root in `skills/` — these are **not** shipped as MCP resources; they're authoring aids for coding agents working *on* the library or on a server that uses the library:
 
@@ -140,30 +140,24 @@ Two additional skills live at the repo root in `skills/` — these are **not** s
 ## Installation API
 
 ```ts
-import {
-  registerShowLens,          // required
-  registerPresets,           // optional
-  registerLensSkillResource, // optional
-  getLensSkill,
-} from '@mcp-lens/sdk';
+import { registerShowLens, getLensSkill } from '@mcp-lens/sdk';
 
-registerShowLens(server);                            // adds show_lens + renderer resource
-registerPresets(server, [shoePreset, orderPreset]);  // adds list/get preset tools
-registerLensSkillResource(server);                   // adds the skill as an MCP resource
+registerShowLens(server, { presets: [shoePreset, orderPreset] });
+// Installs: show_lens + renderer resource + get_lens_guide + get_lens_preset
 
-// Optional fourth piece: your own memorialize tool. Pick a name and schema,
+// Optional second piece: your own memorialize tool. Pick a name and schema,
 // wire it to your auth + persistence. See packages/mcp-lens/README.md
 // ("Authoring a memorialize tool") and packages/demos/shoes-mcp for a
 // runnable example.
 ```
 
-Everything past `registerShowLens` is opt-in.
+One call does everything. Presets are optional — omit the `presets` option and only `show_lens` + `get_lens_guide` are registered (no `get_lens_preset` without presets). `registerPresets` and `registerLensSkillResource` still exist but are deprecated.
 
 ## Flow: one lens, end to end
 
-1. **Session start.** Agent reads server instructions + the skill resource. If a memorialize-style tool is advertised on the server (recognized by description, not name), agent calls it with no args and ingests prior preferences.
+1. **Session start.** Agent calls `get_lens_guide` to receive the spec reference, user preferences (if configured), and the preset index. If a memorialize-style tool is advertised on the server (recognized by description, not name), agent calls it with no args and ingests prior preferences.
 2. **User turn.** User asks a question that would benefit from a visual answer.
-3. **(Optional) preset consultation.** Agent calls `list_lens_presets`, fetches relevant ones, uses as reference.
+3. **(Optional) preset consultation.** Agent calls `get_lens_preset(name)` for relevant presets from the index, uses as reference.
 4. **Compose.** Agent composes a lens spec from data it already has, writes a `description` for itself.
 5. **Call.** Agent calls `show_lens(spec, description)`. Server validates and returns a response with the renderer URI and structuredContent carrying the spec.
 6. **Render.** Host loads the renderer iframe; renderer reads the bridge (spec or legacy), validates, and draws the lens + star.

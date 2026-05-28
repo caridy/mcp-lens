@@ -42,9 +42,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { lensSpecSchema } from '../spec/schema.js';
-import type { LensSpec } from '../spec/types.js';
+import { LENS_SPEC_VERSION, type LensSpec } from '../spec/types.js';
 import { RENDERER_HTML } from '../renderer-bundle.js';
 import { toolError } from './_internal.js';
+import { type LensPreset, InMemoryPresetStore } from './presets.js';
+import { getLensSkill } from '../skill.js';
 
 /** Canonical MCP UI resource URI for the lens renderer. */
 export const LENS_RENDERER_URI = 'ui://mcp-lens/renderer.html';
@@ -65,7 +67,46 @@ export interface RegisterShowLensOptions {
    * name already in use on the host server.
    */
   toolName?: string;
+
+  /**
+   * Moment-shaped presets the server ships. Registers `get_lens_preset`
+   * and includes the preset index in `get_lens_guide` output.
+   */
+  presets?: LensPreset[];
+
+  /**
+   * Optional callback that returns user-specific preferences (previously
+   * memorialized descriptions). Called each time `get_lens_guide` is
+   * invoked — the result is appended to the guide so the agent has
+   * preferences in context for the rest of the session.
+   *
+   * Server authors wire their own persistence + identity resolution here.
+   */
+  getPreferences?: (extra: unknown) => Promise<string[]> | string[];
+
+  /**
+   * Optional debug callback invoked on every show_lens call. Receives the
+   * raw input arguments, any coercion that was applied, and the result
+   * (success or error). Useful for diagnosing what the model actually sends.
+   */
+  onCall?: (event: ShowLensCallEvent) => void;
 }
+
+export interface ShowLensCallEvent {
+  /** Raw arguments as received from the MCP transport. */
+  rawArgs: { spec: unknown; description: unknown };
+  /** The spec value after coercion (JSON-parse, unwrap, etc.), before validation. */
+  coercedSpec: unknown;
+  /** What coercion steps were applied (empty array = none). */
+  coercionSteps: string[];
+  /** Whether validation passed. */
+  valid: boolean;
+  /** Zod issues if validation failed. */
+  issues?: Array<{ path: (string | number)[]; message: string }>;
+}
+
+/** Re-exported from presets.ts for convenience. */
+export type { LensPreset } from './presets.js';
 
 /**
  * Attach the show_lens tool (and its backing renderer resource) to an
@@ -76,6 +117,7 @@ export function registerShowLens(
   options: RegisterShowLensOptions = {},
 ): void {
   const toolName = options.toolName ?? 'show_lens';
+  const onCall = options.onCall;
 
   // 1. Register the renderer as a resource so clients can fetch the HTML.
   //    The tool response references it by URI via _meta.ui.resourceUri
@@ -141,16 +183,126 @@ export function registerShowLens(
         return toolError(formatDescriptionError());
       }
 
-      const validation = lensSpecSchema.safeParse(args.spec);
+      const coercionSteps: string[] = [];
+      const coerced = coerceSpec(args.spec, coercionSteps);
+      const validation = lensSpecSchema.safeParse(coerced);
+
+      if (onCall) {
+        try {
+          onCall({
+            rawArgs: { spec: args.spec, description: args.description },
+            coercedSpec: coerced,
+            coercionSteps,
+            valid: validation.success,
+            issues: validation.success ? undefined : validation.error.issues,
+          });
+        } catch { /* debug callback must not crash the tool */ }
+      }
+
       if (!validation.success) {
         return toolError(
-          formatSpecError(args.spec, validation.error.issues),
+          formatSpecError(coerced, validation.error.issues),
         );
       }
 
       return buildToolResult(validation.data, description);
     },
   );
+
+  // 3. Register get_lens_guide — the session bootstrap tool.
+  const presetStore = options.presets?.length
+    ? new InMemoryPresetStore(options.presets)
+    : null;
+  const getPreferences = options.getPreferences;
+
+  server.registerTool(
+    'get_lens_guide',
+    {
+      title: 'Get lens guide',
+      description: GET_LENS_GUIDE_DESCRIPTION,
+      annotations: {
+        readOnlyHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (extra) => {
+      const sections: string[] = [];
+
+      // Section 1: the spec reference (condensed skill).
+      sections.push(getLensSkill());
+
+      // Section 2: user preferences (if configured).
+      if (getPreferences) {
+        try {
+          const prefs = await Promise.resolve(getPreferences(extra));
+          if (prefs.length > 0) {
+            sections.push(
+              '---\n\n## Your saved preferences\n\n' +
+              'The user has previously starred these views. Use them to shape every lens you compose this session:\n\n' +
+              prefs.map((p) => `- ${p}`).join('\n'),
+            );
+          }
+        } catch { /* preferences are best-effort */ }
+      }
+
+      // Section 3: preset index (if presets are registered).
+      if (presetStore) {
+        const all = await Promise.resolve(presetStore.list());
+        if (all.length > 0) {
+          const lines = all.map((p) => `- \`${p.name}\` — ${p.description}`);
+          sections.push(
+            '---\n\n## Available presets\n\n' +
+            'Call `get_lens_preset(name)` for the full body of any preset.\n\n' +
+            lines.join('\n'),
+          );
+        }
+      }
+
+      const body = sections.join('\n\n');
+      return {
+        content: [{ type: 'text' as const, text: body }],
+      };
+    },
+  );
+
+  // 4. Register get_lens_preset (only if presets are provided).
+  if (presetStore) {
+    server.registerTool(
+      'get_lens_preset',
+      {
+        title: 'Get lens preset',
+        description: GET_LENS_PRESET_DESCRIPTION,
+        inputSchema: {
+          name: z
+            .string()
+            .min(1)
+            .describe("The preset's name, as listed in the guide. Case-sensitive."),
+        },
+        annotations: {
+          readOnlyHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async ({ name }) => {
+        const preset = await Promise.resolve(presetStore.get(name));
+        if (!preset) {
+          return toolError(
+            `No preset named "${name}". Call get_lens_guide to see the available preset names.`,
+          );
+        }
+        return {
+          content: [{ type: 'text' as const, text: preset.body }],
+          structuredContent: {
+            name: preset.name,
+            description: preset.description,
+            body: preset.body,
+          },
+        };
+      },
+    );
+  }
 }
 
 // ── Input schema ────────────────────────────────────────────────────────────
@@ -179,18 +331,97 @@ const showLensInputShape = {
 // Apps delivers it intact via window.openai.toolOutput when no schema
 // gets in the way.
 
+// ── Spec coercion ──────────────────────────────────────────────────────────
+//
+// Clients (models) send `spec` in several wrong-but-recoverable shapes:
+//   1. JSON string instead of an object (Claude Desktop observed 2026-05-27)
+//   2. Wrapped in an extra `{ spec: ... }` envelope
+//   3. Bare root node without specVersion/root wrapper
+//   4. specVersion missing but root present
+//
+// We fix these silently and validate the result. If the coerced value still
+// fails validation, the structured error output is based on the coerced
+// shape (so hints are relevant to what we actually tried to validate).
+
+function coerceSpec(raw: unknown, steps: string[] = []): unknown {
+  let value = raw;
+
+  // 1. JSON string → parse it.
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        value = JSON.parse(trimmed);
+        steps.push('parsed JSON string');
+      } catch {
+        return value;
+      }
+    } else {
+      return value;
+    }
+  }
+
+  if (value === null || typeof value !== 'object') return value;
+
+  const obj = value as Record<string, unknown>;
+
+  // 2. Unwrap `{ spec: { ... } }` envelope.
+  if ('spec' in obj && typeof obj.spec === 'object' && obj.spec !== null) {
+    const inner = obj.spec as Record<string, unknown>;
+    if ('specVersion' in inner || 'root' in inner) {
+      value = inner;
+      steps.push('unwrapped { spec: ... } envelope');
+    }
+  }
+
+  const current = value as Record<string, unknown>;
+
+  // 3. Bare root node — has `type` but no `specVersion`/`root`.
+  if ('type' in current && !('specVersion' in current) && !('root' in current)) {
+    steps.push('wrapped bare node in { specVersion, root }');
+    return { specVersion: LENS_SPEC_VERSION, root: current };
+  }
+
+  // 4. Has `root` but missing `specVersion` — inject it.
+  if ('root' in current && !('specVersion' in current)) {
+    steps.push('injected missing specVersion');
+    return { specVersion: LENS_SPEC_VERSION, ...current };
+  }
+
+  return value;
+}
+
 // ── Tool description (read by the agent) ────────────────────────────────────
 
 const SHOW_LENS_DESCRIPTION = [
   'Render a rich view for the user by composing a lens spec.',
   '',
-  'Use this instead of a text response when a visual presentation would serve the user better — comparing items, showing structured data, offering actionable buttons, or producing a summary card.',
+  'Call `get_lens_guide` before composing your first lens — it returns the full spec vocabulary, your user\'s saved preferences, and a list of available presets.',
   '',
   'The lens spec is a small JSON tree (boxes, columns, cards, text, buttons, images, comparisons). Compose it from data you already have. Do not embed placeholders; inline real values.',
   '',
   'Buttons emit follow-up prompts when clicked — write the prompt as the user would type it. Never reference server-side tools or APIs directly.',
   '',
   'Always pass a `description`. It is model-facing metadata (not shown verbatim to the user) describing what the lens contains and what design choices were made.',
+].join('\n');
+
+const GET_LENS_GUIDE_DESCRIPTION = [
+  'Get the MCP Lens spec reference, user preferences, and available presets.',
+  '',
+  'Call this once before composing your first lens. Returns:',
+  '1. The full node vocabulary (containers, content, interactive, table) and core composition rules.',
+  '2. Previously saved user preferences (if any) — use them to shape every lens this session.',
+  '3. A list of available presets — fetch any with `get_lens_preset(name)` for moment-specific guidance.',
+  '',
+  'After context compaction, call again to reload the spec reference and preferences.',
+].join('\n');
+
+const GET_LENS_PRESET_DESCRIPTION = [
+  'Fetch the full body of a lens preset by name.',
+  '',
+  'The body is markdown describing how to present a specific conversational moment. It explains intent, labels which parts are prescriptive vs. illustrative, and embeds worked JSON examples.',
+  '',
+  'Use it as reference when composing a lens for that moment. Inline your real data in place of sample values.',
 ].join('\n');
 
 // ── Result construction ─────────────────────────────────────────────────────
@@ -359,7 +590,7 @@ function formatSpecError(
   // ── Pointers ───────────────────────────────────────────────────────────
   parts.push('');
   parts.push(
-    'Need a fuller reference? Read `skill://mcp-lens/show-lens` for the complete vocabulary and examples. If presets are available on this server, call `list_lens_presets` and `get_lens_preset` for precedents that already use the correct shape.',
+    'Need a fuller reference? Call `get_lens_guide` for the complete node vocabulary and composition rules. If presets are available, call `get_lens_preset(name)` for precedents that already use the correct shape.',
   );
 
   return parts.join('\n');

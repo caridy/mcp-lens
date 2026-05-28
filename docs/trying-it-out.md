@@ -154,7 +154,7 @@ The standalone Lens server (`mcp-lens-server`) ships only `show_lens`, three dom
 Configure both connectors in your host. The agent will see:
 
 - **From recipes-mcp:** `list_cuisines`, `search_recipes`, `get_recipe`.
-- **From mcp-lens-server:** `show_lens`, `list_lens_presets`, `get_lens_preset`.
+- **From mcp-lens-server:** `show_lens`, `get_lens_guide`, `get_lens_preset`.
 
 The **A/B test that makes this compelling** is to disable the lens connector first, ask a recipe question, then re-enable it and ask again:
 
@@ -243,7 +243,7 @@ In Slackbot, toggle on the "Orders MCP" connector and ask:
 
 The Slackbot pilot is **read-only in Phase 0**. The orders-mcp tools advertise `readOnlyHint`/`destructiveHint` annotations honestly, so Slack's filter has the data it needs:
 
-- `list_orders`, `get_order`, `show_lens`, `list_lens_presets`, `get_lens_preset` should be available.
+- `list_orders`, `get_order`, `show_lens`, `get_lens_guide`, `get_lens_preset` should be available.
 - `cancel_order`, `update_shipping_address` are non-read; Slack will likely suppress them in Phase 0. The cancel-confirmation flow won't be reachable until "tool allowance" / write-tool support lands. Suppression here is *expected*, not a bug.
 
 ### Iframe rendering — open unknowns
@@ -254,13 +254,13 @@ Slack's docs mention HTML iframes "for interoperability" alongside the Block Kit
 
 - **"Connector failed to load."** Most often an ngrok warning interstitial. Visit the tunnel URL in a browser once to dismiss it, then retry in ChatGPT. Switching to `cloudflared` avoids this entirely.
 - **ChatGPT says "I don't have that capability" / refuses to use the connector.** Make sure the connector toggle is **on** in the composer for the chat, not just enabled globally. Ask explicitly: *"Use the shoes connector to find…"*.
-- **No lens appears, just text.** Either the skill isn't reaching the agent (check `resources/list` in the server terminal includes `skill://mcp-lens/show-lens`) or the agent chose text. Ask explicitly: *"Show this as a visual lens."* If that doesn't work, the agent may not be reading MCP resources on connect — embedding the skill in the server's `instructions` (already done in both demos) is the backup.
+- **No lens appears, just text.** Either the skill isn't reaching the agent (verify the agent calls `get_lens_guide` on session start) or the agent chose text. Ask explicitly: *"Show this as a visual lens."* If that doesn't work, the agent may not be calling tools proactively on connect — embedding the skill in the server's `instructions` (already done in both demos) is the backup.
 - **Widget appears then disappears / renders as plain text.** ChatGPT Apps widget behavior varies by account tier and feature flags. Check the server terminal for the tool response — the `_meta['openai/outputTemplate']` and `_meta['openai/widgetDescription']` should both be present. If they are, it's a client-side rendering issue, not a server problem.
 - **"window.openai.toolOutput is null, expected an object with a `spec` field."** Stale renderer bundle. `mcp-lens` treats null as "not here yet." Rebuild: `pnpm build` at the repo root, then reconnect the connector.
 - **"window.openai.toolInput has no `spec` field."** Same root cause — a stale bundle from before the host-bridge classifier correctly handled cross-tool bridge sharing. ChatGPT reuses `toolInput`/`toolOutput` across tool calls, and a non-lens tool's args appearing there is normal. Rebuild and reconnect.
 - **"Invalid lens spec: root.children: Required" / "root.items.N.values: Required" / similar "Required" on a field that was manifestly present in your input.** Stale bundle. Versions 0.1.x experimented with several wire shapes (`spec` as `z.unknown()`, then `z.record(string, any)`, then `specJson` as a JSON-encoded string) trying to defeat ChatGPT's host-side JSON Schema enforcement. Current builds **publish no `outputSchema` at all** and ship a plain nested `spec` object — and ChatGPT delivers it intact. Rebuild (`pnpm build`) and reconnect the connector. If it persists, the iframe may be cached — disconnect the connector, re-register it, and try again.
 - **Widget shows a stale-bundle-style error specifically *after a button click* on a widget that had been working a moment earlier.** Older builds fell back to `window.openai.toolInput` when `toolOutput` was null — which catches the agent's *next tool call's args* mid-streaming (e.g. only `{specVersion: "0.1"}` populated so far) and validates it as a broken lens. Current builds read only `toolOutput` and subscribe to `openai:set_globals`, so they don't conflate other tools' input with our output. Rebuild and reconnect.
-- **stdio MCP client (Codex Desktop, Claude Desktop) connects without error but never uses the tools.** Older demo builds shipped the entire 15KB lens skill in the server's `instructions` field. Some stdio clients truncate or otherwise mishandle oversized `instructions`, and there's no error surface for it. Current builds keep `instructions` to a ~500-byte orientation paragraph and expose the full skill via the `skill://mcp-lens/show-lens` resource. If you're on an old build, you'll see no errors — just an unresponsive agent. Rebuild and reconfigure the connector.
+- **stdio MCP client (Codex Desktop, Claude Desktop) connects without error but never uses the tools.** Older demo builds shipped the entire 15KB lens skill in the server's `instructions` field. Some stdio clients truncate or otherwise mishandle oversized `instructions`, and there's no error surface for it. Current builds keep `instructions` to a ~500-byte orientation paragraph and deliver the full skill via the `get_lens_guide` tool (which the agent calls on session start). If you're on an old build, you'll see no errors — just an unresponsive agent. Rebuild and reconfigure the connector.
 
 ## Reading the iframe console
 
@@ -286,11 +286,10 @@ If validation fails, the log includes the *full received spec* (before zod) and 
 The most useful tool for debugging is the demo's own terminal. Every request prints as JSON-RPC. A successful lens render looks like:
 
 1. `tools/list` — ChatGPT discovers what's available.
-2. `resources/list` — ChatGPT discovers the skill + renderer resources.
-3. `resources/read` — ChatGPT pulls the skill into context.
-4. `tools/call` for a domain tool (e.g. `get_shoe`) — returns JSON data.
-5. `tools/call` for `show_lens` — response includes `structuredContent: { specJson }` (the full spec as a JSON-encoded string) plus `_meta['openai/outputTemplate']` (renderer URI) and `_meta['openai/widgetDescription']` (the agent's description, model-facing).
-6. `resources/read` for the renderer URI — ChatGPT fetches the HTML bundle.
-7. Widget renders in the chat; `window.openai.toolOutput` carries `{ specJson: "<JSON string>" }`. The renderer parses the JSON internally. The description stays in `_meta` for the agent, not the widget.
+2. `tools/call` for `get_lens_guide` — agent pulls the spec reference, preferences, and preset index into context.
+3. `tools/call` for a domain tool (e.g. `get_shoe`) — returns JSON data.
+4. `tools/call` for `show_lens` — response includes `structuredContent: { specJson }` (the full spec as a JSON-encoded string) plus `_meta['openai/outputTemplate']` (renderer URI) and `_meta['openai/widgetDescription']` (the agent's description, model-facing).
+5. `resources/read` for the renderer URI — ChatGPT fetches the HTML bundle.
+6. Widget renders in the chat; `window.openai.toolOutput` carries `{ specJson: "<JSON string>" }`. The renderer parses the JSON internally. The description stays in `_meta` for the agent, not the widget.
 
 If any of these steps stops happening, work back from the missing step.

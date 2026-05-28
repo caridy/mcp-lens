@@ -32,8 +32,8 @@ npx -y --package @mcp-lens/server mcp-lens-server-http   # listens on :3010 by d
 ## What it ships
 
 - **`show_lens`** — the canonical lens-rendering tool. Same as installing `@mcp-lens/sdk` directly.
-- **`list_lens_presets` / `get_lens_preset`** — discovery for the three generic moment-shaped presets.
-- **`skill://mcp-lens/show-lens`** — the lens-authoring skill, exposed as an MCP resource so the agent reads it on connect.
+- **`get_lens_guide`** — session bootstrap: returns the spec reference + preset index. The agent calls this before composing its first lens.
+- **`get_lens_preset(name)`** — fetch one of the three generic moment-shaped presets.
 
 What it does **not** ship:
 

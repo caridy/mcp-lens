@@ -11,12 +11,11 @@
  *
  *   Tools:
  *     - show_lens                   (required — the generic renderer surface)
- *     - list_lens_presets           (advertises the generic moment pack)
+ *     - get_lens_guide              (session bootstrap: spec ref + preset index)
  *     - get_lens_preset             (returns a preset's full markdown body)
  *
  *   Resources:
  *     - ui://mcp-lens/renderer.html (the React widget bundle)
- *     - skill://mcp-lens/show-lens  (the lens-authoring skill)
  *
  * Notably *not* exposed:
  *
@@ -36,12 +35,9 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import {
-  registerShowLens,
-  registerPresets,
-  registerLensSkillResource,
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 import { GENERIC_PRESETS } from './presets.js';
+import { debugLog, isDebugEnabled } from './debug.js';
 
 export interface CreateLensServerOptions {
   /** Override server name (defaults to "mcp-lens-server"). */
@@ -64,11 +60,10 @@ export function createLensServer(
     },
   );
 
-  // The order below is significant only for code readability — each
-  // helper registers a disjoint set of tools/resources.
-  registerShowLens(server);
-  registerPresets(server, GENERIC_PRESETS);
-  registerLensSkillResource(server);
+  registerShowLens(server, {
+    presets: GENERIC_PRESETS,
+    onCall: isDebugEnabled() ? (event) => debugLog('show_lens_call', event) : undefined,
+  });
 
   return server;
 }
@@ -76,20 +71,15 @@ export function createLensServer(
 // Server instructions are deliberately short. (See the comment in any of
 // the demo servers' SERVER_INSTRUCTIONS block for why — oversized
 // instructions break some stdio clients silently.) The full lens skill
-// is exposed as the resource skill://mcp-lens/show-lens; the moment
-// presets are listed by list_lens_presets.
+// is delivered via the get_lens_guide tool; the moment presets are
+// listed in its output and fetchable via get_lens_preset.
 const SERVER_INSTRUCTIONS = `mcp-lens-server — generic Lens app.
 
-This server gives you the show_lens tool plus a domain-blind set of moment-shaped presets so you can render rich next-turn affordances on top of data from other MCP servers connected to this host. There is no upstream domain server here — pair this with whatever catalog/CRM/data server you already have wired up.
+This server gives you show_lens plus domain-blind moment-shaped presets so you can render rich next-turn affordances on top of data from other MCP servers connected to this host.
 
 Tools:
-- show_lens: render a lens. Takes spec + description.
-- list_lens_presets: discover the generic moment-shaped presets shipped here.
-- get_lens_preset: fetch a preset's full markdown body.
+- get_lens_guide: call FIRST — returns the spec reference, preferences, and preset index.
+- get_lens_preset(name): fetch a preset's full body for moment-specific guidance.
+- show_lens(spec, description): render a lens.
 
-Workflow:
-1. Read skill://mcp-lens/show-lens for the full lens-authoring guide.
-2. Call list_lens_presets to see the moment-shaped presets (user-asked-about-a-thing, user-is-browsing-things, user-is-choosing-between-things).
-3. For each conversational moment, fetch the matching preset, anchor on data the upstream server returned, and pick affordances that fit the data type.
-
-The presets are deliberately domain-blind. They tell you WHAT KIND of follow-ups to offer; YOU pick the verbs that fit the data the upstream server is serving. A list of products gets "Compare" and "Details" buttons. A list of recipes gets "Make this" and "Details". The moment shape stays the same; the verbs shift to the domain.`;
+Workflow: get_lens_guide → (optionally) get_lens_preset → show_lens. The presets are domain-blind — they tell you WHAT KIND of follow-ups to offer; YOU pick the verbs that fit the upstream data.`;

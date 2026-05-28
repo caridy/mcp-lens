@@ -7,10 +7,10 @@ pnpm add @mcp-lens/presets @mcp-lens/sdk
 ```
 
 ```ts
-import { registerPresets } from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 import { INCIDENTS_PRESETS } from '@mcp-lens/presets/incidents';
 
-registerPresets(server, INCIDENTS_PRESETS);
+registerShowLens(server, { presets: INCIDENTS_PRESETS });
 ```
 
 ## What's in here

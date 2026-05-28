@@ -15,11 +15,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import {
-  registerShowLens,
-  registerPresets,
-  registerLensSkillResource,
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 import { findShoe, searchShoes, SHOES } from './data.js';
 import { SHOE_PRESETS } from './presets.js';
 
@@ -118,13 +114,8 @@ export function createShoesServer(): McpServer {
   );
 
   // ── MCP Lens wiring ─────────────────────────────────────────────────────
-  //
-  // Register show_lens (required), then the optional helpers. Ordering is
-  // not significant — each registers a distinct set of tools/resources.
 
-  registerShowLens(server);
-  registerPresets(server, SHOE_PRESETS);
-  registerLensSkillResource(server);
+  registerShowLens(server, { presets: SHOE_PRESETS });
 
   // ── Memorialize tool — author-defined, not shipped by the SDK ──────────
   //
@@ -206,20 +197,15 @@ export function createShoesServer(): McpServer {
 
 // Server instructions are deliberately short. Some MCP clients (notably
 // Codex Desktop and Claude Desktop) limit or silently drop oversized
-// `instructions` fields in the initialize response — and we previously
-// shipped the entire 15KB lens skill here, which broke those clients
-// without surfacing any error.
-//
-// The full skill is exposed via the `skill://mcp-lens/show-lens`
-// resource (registered by registerLensSkillResource). Agents that read
-// MCP resources will pick it up automatically; agents that don't can
-// be told to fetch it via this short pointer.
+// `instructions` fields in the initialize response — keep them short.
+// The full spec reference is delivered via the get_lens_guide tool.
 const SERVER_INSTRUCTIONS = `shoes-mcp — tennis shoe catalog with MCP Lens for rich presentation.
 
 Tools:
 - search_shoes, get_shoe: catalog data.
-- show_lens: render a rich view. Takes spec + description.
-- list_lens_presets, get_lens_preset: presentation precedents.
-- save_lens_preference: read or write per-user lens-presentation preferences. Call once with no arguments at session start to load preferences; call with a description on star to save one.
+- get_lens_guide: call FIRST — returns spec reference, user preferences, and preset index.
+- get_lens_preset(name): fetch a preset's full body.
+- show_lens(spec, description): render a lens.
+- save_lens_preference: read or write per-user lens-presentation preferences.
 
-Before composing any lens, read the resource skill://mcp-lens/show-lens for the full lens-authoring guide, then call list_lens_presets to see this server's presentation precedents.`;
+Workflow: get_lens_guide → get_lens_preset → show_lens.`;

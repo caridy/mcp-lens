@@ -6,11 +6,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import {
-  registerShowLens,
-  registerPresets,
-  registerLensSkillResource,
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 import {
   cancelOrder,
   getOrder,
@@ -181,20 +177,19 @@ export function createOrdersServer(): McpServer {
 
   // ── MCP Lens wiring ─────────────────────────────────────────────────────
 
-  registerShowLens(server);
-  registerPresets(server, ORDER_PRESETS);
-  registerLensSkillResource(server);
+  registerShowLens(server, { presets: ORDER_PRESETS });
 
   return server;
 }
 
-// See the comment in shoes-mcp/server.ts: keep instructions short. The
-// full lens skill is exposed via the skill://mcp-lens/show-lens resource.
+// Keep instructions short. The full spec reference is delivered via get_lens_guide.
 const SERVER_INSTRUCTIONS = `orders-mcp — order management with MCP Lens for rich presentation.
 
 Tools:
 - list_orders, get_order: read catalog.
 - cancel_order, update_shipping_address: mutations. cancel_order is DESTRUCTIVE — confirm with the user by showing a confirmation lens first; do not call cancel_order until the user's next message clearly confirms.
-- show_lens, list_lens_presets, get_lens_preset: MCP Lens surface.
+- get_lens_guide: call FIRST — returns spec reference + preset index.
+- get_lens_preset(name): fetch a preset's full body.
+- show_lens(spec, description): render a lens.
 
-Before composing any lens, read the resource skill://mcp-lens/show-lens for the lens-authoring guide, then call list_lens_presets for this server's presentation precedents — they are organized around conversational moments (user asked about an order, user is browsing, user asked to cancel).`;
+Workflow: get_lens_guide → get_lens_preset → show_lens. Presets are organized around conversational moments (user asked about an order, user is browsing, user asked to cancel).`;

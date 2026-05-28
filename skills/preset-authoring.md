@@ -10,12 +10,12 @@ If you are a coding agent reading this: your job is to produce a markdown file a
 
 ## What a preset is
 
-A preset is a **markdown file with YAML frontmatter** at `presets/<domain>/<moment>.md`. The `mcp-presets` build step reads every preset file, validates it, and emits typed TypeScript exports per domain. A demo or external server then imports `mcp-presets/<domain>` and registers the presets at runtime via `registerPresets`.
+A preset is a **markdown file with YAML frontmatter** at `presets/<domain>/<moment>.md`. The `mcp-presets` build step reads every preset file, validates it, and emits typed TypeScript exports per domain. A demo or external server then imports `@mcp-lens/presets/<domain>` and passes the presets to `registerShowLens(server, { presets })`.
 
 Each preset has:
 
 - `name` (frontmatter) — kebab-case identifier following the `user-<is/asked/asked-to>-<predicate>` convention. **Must match the filename**.
-- `description` (frontmatter) — one-line hook the agent sees in `list_lens_presets`. Decides whether the agent *fetches* this preset.
+- `description` (frontmatter) — one-line hook the agent sees in the `get_lens_guide` preset index. Decides whether the agent *fetches* this preset.
 - body (everything below the frontmatter) — markdown with prose + YAML examples. Decides how the agent *uses* it.
 
 The agent reads the body the way a thoughtful engineer reads a code review comment: as guidance plus a worked example, not as a template to fill in.
@@ -236,7 +236,7 @@ Three layers, fail-fast → real-host:
 
 1. **Build validation.** `pnpm --filter @mcp-lens/presets build` reads every `.md` in `presets/`, validates the frontmatter (name present, description present, name matches filename, name unique within domain), and parses every fenced ```yaml block. A broken preset fails the build. If the build passes, the preset is at least syntactically correct.
 
-2. **Smoketest.** Every demo in this repo has `src/smoketest.ts` that exercises every tool plus a representative `show_lens` call. Run yours after a successful build. The smoketest catches integration-level issues (does the demo's `presets.ts` import the new preset, does `list_lens_presets` advertise it). It does not catch "this preset is too rigid" or "the agent ignores it."
+2. **Smoketest.** Every demo in this repo has `src/smoketest.ts` that exercises every tool plus a representative `show_lens` call. Run yours after a successful build. The smoketest catches integration-level issues (does the demo's `presets.ts` import the new preset, does `get_lens_guide` list it in the preset index). It does not catch "this preset is too rigid" or "the agent ignores it."
 
 3. **Real-host test.** Run your server against ChatGPT, Claude Desktop, or Slack (whichever your audience uses). Ask the prompts that should trigger your presets. Watch what the agent produces. If the lens is consistently off-model from your intent, refine the preset's prose — likely the "Likely next turns" section is too vague, or the "Anchor (prescriptive)" section is missing a structural detail the agent needs.
 

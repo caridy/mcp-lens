@@ -14,11 +14,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import {
-  registerShowLens,
-  registerPresets,
-  registerLensSkillResource,
-} from '@mcp-lens/sdk';
+import { registerShowLens } from '@mcp-lens/sdk';
 import {
   getAccount,
   getIncident,
@@ -314,26 +310,21 @@ export function createIncidentsServer(): McpServer {
   );
 
   // ── MCP Lens wiring ─────────────────────────────────────────────────────
-  //
-  // Register show_lens (required), the preset surface, and the skill
-  // resource.
 
-  registerShowLens(server);
-  registerPresets(server, INCIDENT_PRESETS);
-  registerLensSkillResource(server);
+  registerShowLens(server, { presets: INCIDENT_PRESETS });
 
   return server;
 }
 
-// Short orientation paragraph (~500 bytes). The full lens skill is
-// exposed as a resource via registerLensSkillResource — clients that
-// truncate `instructions` aggressively still get the orientation here
-// and can fetch the rich skill on demand.
+// Short orientation paragraph. The full spec reference is delivered
+// via the get_lens_guide tool at the agent's first call.
 const SERVER_INSTRUCTIONS = `incidents-mcp — incident management with MCP Lens for rich presentation.
 
 Tools (all read-only):
 - list_accounts, get_account, list_incidents, get_incident: query data.
 - get_incident_timeline, get_incident_impact, get_incident_contributors: drill into one incident.
-- show_lens, list_lens_presets, get_lens_preset: MCP Lens surface.
+- get_lens_guide: call FIRST — returns spec reference + preset index.
+- get_lens_preset(name): fetch a preset's full body.
+- show_lens(spec, description): render a lens.
 
-Before composing any lens, read skill://mcp-lens/show-lens for the lens-authoring guide, then call list_lens_presets — presets are organized by conversational moment (user asked about an account, user is browsing incidents, user asked about incident impact, etc.). Combine presets when the user's intent spans both an account and its incidents.`;
+Workflow: get_lens_guide → get_lens_preset → show_lens. Presets are organized by conversational moment (user asked about an account, user is browsing incidents, user asked about incident impact, etc.). Combine presets when the intent spans both an account and its incidents.`;
