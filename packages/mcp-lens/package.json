@@ -1,6 +1,6 @@
 {
   "name": "@mcp-lens/sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MCP Lens SDK — agent-composed views for any MCP server. Drop in a single tool + skill and any MCP server gains rich presentation.",
   "publishConfig": {
     "access": "public"

@@ -253,7 +253,12 @@ export function registerShowLens(
           const lines = all.map((p) => `- \`${p.name}\` — ${p.description}`);
           sections.push(
             '---\n\n## Available presets\n\n' +
-            'Call `get_lens_preset(name)` for the full body of any preset.\n\n' +
+            'Each preset contains custom composition rules, affordance patterns, and structural guidance for a well-defined conversational moment. ' +
+            'The descriptions below help you pick which preset fits — but the actual guidance is in the body.\n\n' +
+            '**When to call `get_lens_preset(name)`:**\n' +
+            '- The first time you encounter a moment that matches a preset — fetch it and use it as your reference.\n' +
+            '- You can reuse what you learned from a preset across the session without re-fetching.\n' +
+            '- If no preset matches the moment, compose from scratch using the spec reference above.\n\n' +
             lines.join('\n'),
           );
         }
@@ -411,7 +416,7 @@ const GET_LENS_GUIDE_DESCRIPTION = [
   'Call this once before composing your first lens. Returns:',
   '1. The full node vocabulary (containers, content, interactive, table) and core composition rules.',
   '2. Previously saved user preferences (if any) — use them to shape every lens this session.',
-  '3. A list of available presets — fetch any with `get_lens_preset(name)` for moment-specific guidance.',
+  '3. A list of available presets — call `get_lens_preset(name)` the first time you encounter a matching moment. The one-line descriptions help you pick; the full body has the composition guidance.',
   '',
   'After context compaction, call again to reload the spec reference and preferences.',
 ].join('\n');

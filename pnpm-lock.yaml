@@ -161,10 +161,10 @@ importers:
   packages/mcp-lens-server:
     dependencies:
       '@mcp-lens/presets':
-        specifier: ^0.1.1
+        specifier: ^0.1.3
         version: link:../mcp-presets
       '@mcp-lens/sdk':
-        specifier: ^0.1.1
+        specifier: ^0.1.3
         version: link:../mcp-lens
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
@@ -186,7 +186,7 @@ importers:
   packages/mcp-presets:
     devDependencies:
       '@mcp-lens/sdk':
-        specifier: ^0.1.1
+        specifier: ^0.1.3
         version: link:../mcp-lens
       '@types/node':
         specifier: ^22.10.0

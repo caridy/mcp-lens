@@ -1,6 +1,6 @@
 {
   "name": "@mcp-lens/server",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Standalone MCP Lens server. Run alongside any MCP server to give the agent the show_lens tool plus a domain-blind set of moment-shaped presets, so the agent can compose rich next-turn affordances on top of data the upstream server doesn't know about.",
   "type": "module",
   "publishConfig": {
@@ -36,8 +36,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@mcp-lens/sdk": "^0.1.2",
-    "@mcp-lens/presets": "^0.1.2"
+    "@mcp-lens/sdk": "^0.1.3",
+    "@mcp-lens/presets": "^0.1.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
